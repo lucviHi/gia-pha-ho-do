@@ -18,6 +18,7 @@
     .gp-admin-launch.is-admin{background:#35633c}.gp-node-actions{display:flex;gap:5px;margin-top:8px}.gp-node-actions button{border:1px solid #b98a4e;background:#fff8ed;color:#7b352b;border-radius:4px;padding:4px 8px;font:600 10px Arial;cursor:pointer}.gp-node-actions button:hover{background:#8f2f25;color:#fff}.gp-added-badge{display:inline-block;color:#35633c!important;background:#e3f2e5;padding:2px 6px;border-radius:10px}
     .gp-overlay{position:fixed;inset:0;z-index:10000;background:#271a1499;display:grid;place-items:center;padding:18px}.gp-modal{width:min(560px,100%);max-height:92vh;overflow:auto;background:#fffaf2;border:1px solid #b98a4e;box-shadow:0 24px 70px #0005;padding:24px}.gp-modal h2{font:700 25px 'Times New Roman',serif;color:#67271f;margin:0 0 7px}.gp-modal>p{color:#756357;font:13px/1.5 Arial;margin:0 0 18px}.gp-field{display:block;margin:13px 0}.gp-field span{display:block;color:#53392d;font:600 12px Arial;margin-bottom:6px}.gp-field input,.gp-field textarea{box-sizing:border-box;width:100%;border:1px solid #cbb18d;background:#fff;padding:10px 11px;font:14px/1.45 Arial;color:#2e251f;outline:none}.gp-field textarea{min-height:82px;resize:vertical}.gp-field input:focus,.gp-field textarea:focus{border-color:#8f2f25;box-shadow:0 0 0 2px #8f2f2518}.gp-row{display:flex;gap:9px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}.gp-btn{border:1px solid #8f2f25;background:#8f2f25;color:#fff;padding:9px 15px;font:600 12px Arial;cursor:pointer}.gp-btn.secondary{background:#fff;color:#6b3128}.gp-btn.danger{background:#fff;color:#a51f1f;border-color:#c95757;margin-right:auto}.gp-message{padding:9px 11px;background:#f3eadc;color:#604b3d;font:12px/1.45 Arial;margin:10px 0}.gp-message.error{background:#fde6e2;color:#921f17}.gp-login-email{font-weight:700}.gp-saving{opacity:.6;pointer-events:none}@media(max-width:600px){.gp-admin-launch{right:10px;bottom:10px}.gp-modal{padding:18px}.gp-row .gp-btn{flex:1}}
     .gp-memorial-alert{grid-column:1/-1;border:1px solid #d5a450;background:#fff3cf;color:#5b3820;padding:14px 17px;margin:0;font:13px/1.55 Arial}.gp-memorial-alert strong{display:block;color:#932f24;font:700 17px 'Times New Roman',serif;margin-bottom:5px}.gp-memorial-alert span{display:block}.gp-upcoming{display:inline-block!important;background:#b13b2e;color:#fff!important;border-radius:999px;padding:4px 9px;margin-top:9px;font:700 10px Arial!important}.memorial-grid article.gp-soon{background:#49352b!important;box-shadow:inset 4px 0 0 #e4b34e}.gp-solar-date{display:block;color:#d9c7b3!important;font-size:10px!important;margin-top:4px}
+    .gp-parent-node>details>ul{margin-top:12px}.gp-original-root>details>summary{max-width:520px;margin:0 auto;background:#922f25!important;border:3px double #e7c99f!important}.gp-original-root>details>summary .gene-main>strong,.gp-original-root>details>summary .gene-main>small,.gp-original-root>details>summary .gene-main>em,.gp-original-root>details>summary .spouse b,.gp-original-root>details>summary .spouse small{color:#fff!important}@media(min-width:950px){.gp-original-root>details>ul{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-left:0!important;padding-left:0!important;border-left:0!important}.gp-original-root>details>ul>li:before{display:none}.gp-original-root>details>ul>li>details>summary{height:100%;min-height:112px;padding:10px}.gp-original-root>details>ul>li .gene-main>strong{font-size:15px}}
   `;
   document.head.appendChild(style);
 
@@ -104,7 +105,9 @@
     const edit = document.createElement("button"); edit.type="button"; edit.textContent="Sửa"; edit.onclick=e=>{e.preventDefault();e.stopPropagation();openEditor(key,isAdded);};
     const add = document.createElement("button"); add.type="button"; add.textContent="+ Thêm con"; add.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"child");};
     actions.append(edit,add);
-    if(key!==ROOT_KEY){
+    if(key===ROOT_KEY){
+      const parent=document.createElement("button");parent.type="button";parent.textContent="↑ Thêm đời trên";parent.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"parent");};actions.append(parent);
+    }else{
       const above=document.createElement("button");above.type="button";above.textContent="↑ Nhánh trên";above.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"above");};
       const below=document.createElement("button");below.type="button";below.textContent="↓ Nhánh dưới";below.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"below");};
       actions.append(above,below);
@@ -113,6 +116,7 @@
   }
 
   function renderAdded() {
+    document.querySelectorAll(".gp-parent-node").forEach(parent=>{const original=parent.querySelector(":scope > details > ul > li:not(.gp-added-node)");if(original)parent.before(original);});
     document.querySelectorAll(".gp-added-node").forEach(x => x.remove());
     (data.added || []).forEach(item => {
       const li=document.createElement("li"); li.className="gp-added-node";
@@ -125,7 +129,10 @@
       if(item.memorial){const e=document.createElement("em");e.textContent=`Giỗ ${item.memorial}`;main.appendChild(e);}
       (item.spouses||[]).forEach(s=>main.appendChild(makeSpouse(s)));
       addActions(main,item.id,true); summary.append(toggle,main); d.appendChild(summary); li.appendChild(d);
-      if(item.anchorKey){
+      if(item.placement==="parent"){
+        const anchorMain=document.querySelector(`.gene-main[data-gp-key="${CSS.escape(item.anchorKey)}"]`),anchorLi=anchorMain?.closest("li");if(!anchorLi)return;
+        li.classList.add("gp-parent-node","gene-level-0");anchorLi.classList.add("gp-original-root");const childList=document.createElement("ul");d.appendChild(childList);anchorLi.before(li);childList.appendChild(anchorLi);
+      }else if(item.anchorKey){
         const anchorMain=document.querySelector(`.gene-main[data-gp-key="${CSS.escape(item.anchorKey)}"]`),anchorLi=anchorMain?.closest("li");if(!anchorLi)return;
         if(item.placement==="above")anchorLi.before(li);else anchorLi.after(li);
       }else{
@@ -206,7 +213,7 @@
   }
 
   function openAdd(targetKey,placement="child"){
-    const descriptions={child:"Người mới sẽ được đặt làm con trực tiếp của thành viên đang chọn.",above:"Người mới sẽ được thêm cùng cấp, ngay phía trên nhánh đang chọn.",below:"Người mới sẽ được thêm cùng cấp, ngay phía dưới nhánh đang chọn."};
+    const descriptions={child:"Người mới sẽ được đặt làm con trực tiếp của thành viên đang chọn.",above:"Người mới sẽ được thêm cùng cấp, ngay phía trên nhánh đang chọn.",below:"Người mới sẽ được thêm cùng cấp, ngay phía dưới nhánh đang chọn.",parent:"Người mới sẽ được đặt ở một đời phía trên Cụ tổ. Toàn bộ cây hiện tại vẫn được giữ làm hậu duệ bên dưới."};
     const ov=modal(`<h2>Thêm thành viên</h2><p>${descriptions[placement]}</p><label class="gp-field"><span>Họ và tên</span><input name="name" autofocus></label><label class="gp-field"><span>Thông tin — mỗi dòng một ý</span><textarea name="info"></textarea></label><label class="gp-field"><span>Ngày giỗ</span><input name="memorial"></label><label class="gp-field"><span>Vợ/chồng — Tên | thông tin | ngày giỗ</span><textarea name="spouses"></textarea></label><div class="gp-row"><button class="gp-btn secondary" data-cancel>Hủy</button><button class="gp-btn" data-save>Thêm vào cây</button></div>`);
     const box=ov.querySelector(".gp-modal");box.querySelector("[data-cancel]").onclick=()=>ov.remove();box.querySelector("[data-save]").onclick=async()=>{const name=box.querySelector('[name="name"]').value.trim();if(!name){message(box,"Vui lòng nhập họ tên",true);return;}const item={id:`added_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name,info:box.querySelector('[name="info"]').value.split("\n").map(x=>x.trim()).filter(Boolean),memorial:box.querySelector('[name="memorial"]').value.trim(),spouses:parseSpouses(box.querySelector('[name="spouses"]').value)};if(placement==="child")item.parentKey=targetKey;else{item.anchorKey=targetKey;item.placement=placement;}box.classList.add("gp-saving");try{data.added.push(item);await saveData();ov.remove();applyAll();}catch(e){data.added=data.added.filter(x=>x.id!==item.id);box.classList.remove("gp-saving");message(box,e.message,true);}};
   }
