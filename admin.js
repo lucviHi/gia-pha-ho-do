@@ -102,16 +102,19 @@
     if (!session) return;
     const actions = document.createElement("div"); actions.className = "gp-node-actions";
     const edit = document.createElement("button"); edit.type="button"; edit.textContent="Sửa"; edit.onclick=e=>{e.preventDefault();e.stopPropagation();openEditor(key,isAdded);};
-    const add = document.createElement("button"); add.type="button"; add.textContent="+ Thêm con"; add.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key);};
-    actions.append(edit,add); main.appendChild(actions);
+    const add = document.createElement("button"); add.type="button"; add.textContent="+ Thêm con"; add.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"child");};
+    actions.append(edit,add);
+    if(key!==ROOT_KEY){
+      const above=document.createElement("button");above.type="button";above.textContent="↑ Nhánh trên";above.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"above");};
+      const below=document.createElement("button");below.type="button";below.textContent="↓ Nhánh dưới";below.onclick=e=>{e.preventDefault();e.stopPropagation();openAdd(key,"below");};
+      actions.append(above,below);
+    }
+    main.appendChild(actions);
   }
 
   function renderAdded() {
     document.querySelectorAll(".gp-added-node").forEach(x => x.remove());
     (data.added || []).forEach(item => {
-      const parent = document.querySelector(`.gene-main[data-gp-key="${CSS.escape(item.parentKey)}"]`);
-      const details = parent?.closest("details"); if (!details) return;
-      let ul = direct(details,"ul")[0]; if (!ul) { ul=document.createElement("ul"); details.appendChild(ul); }
       const li=document.createElement("li"); li.className="gp-added-node";
       const d=document.createElement("details"); d.open=true;
       const summary=document.createElement("summary"); const toggle=document.createElement("span"); toggle.className="gene-toggle"; toggle.textContent="·";
@@ -121,7 +124,14 @@
       (item.info||[]).forEach(t=>{const s=document.createElement("small");s.textContent=t;main.appendChild(s);});
       if(item.memorial){const e=document.createElement("em");e.textContent=`Giỗ ${item.memorial}`;main.appendChild(e);}
       (item.spouses||[]).forEach(s=>main.appendChild(makeSpouse(s)));
-      addActions(main,item.id,true); summary.append(toggle,main); d.appendChild(summary); li.appendChild(d); ul.appendChild(li);
+      addActions(main,item.id,true); summary.append(toggle,main); d.appendChild(summary); li.appendChild(d);
+      if(item.anchorKey){
+        const anchorMain=document.querySelector(`.gene-main[data-gp-key="${CSS.escape(item.anchorKey)}"]`),anchorLi=anchorMain?.closest("li");if(!anchorLi)return;
+        if(item.placement==="above")anchorLi.before(li);else anchorLi.after(li);
+      }else{
+        const parent=document.querySelector(`.gene-main[data-gp-key="${CSS.escape(item.parentKey)}"]`),details=parent?.closest("details");if(!details)return;
+        let ul=direct(details,"ul")[0];if(!ul){ul=document.createElement("ul");details.appendChild(ul);}ul.appendChild(li);
+      }
     });
   }
 
@@ -195,9 +205,10 @@
     box.querySelector("[data-delete]").onclick=async()=>{if(key===ROOT_KEY){message(box,"Không thể xóa cụ tổ vì đây là gốc của toàn bộ cây.",true);return;}const displayName=box.querySelector('[name="name"]').value.trim();if(!confirm(`Bạn chắc chắn muốn ẩn “${displayName}” và toàn bộ hậu duệ bên dưới khỏi cây?`))return;box.classList.add("gp-saving");try{if(isAdded)data.added=data.added.filter(x=>x.id!==key);else if(!data.deleted.includes(key))data.deleted.push(key);await saveData();ov.remove();applyAll();}catch(e){box.classList.remove("gp-saving");message(box,e.message,true);}};
   }
 
-  function openAdd(parentKey){
-    const ov=modal(`<h2>Thêm thành viên</h2><p>Người mới sẽ được đặt làm con trực tiếp của thành viên đang chọn.</p><label class="gp-field"><span>Họ và tên</span><input name="name" autofocus></label><label class="gp-field"><span>Thông tin — mỗi dòng một ý</span><textarea name="info"></textarea></label><label class="gp-field"><span>Ngày giỗ</span><input name="memorial"></label><label class="gp-field"><span>Vợ/chồng — Tên | thông tin | ngày giỗ</span><textarea name="spouses"></textarea></label><div class="gp-row"><button class="gp-btn secondary" data-cancel>Hủy</button><button class="gp-btn" data-save>Thêm vào cây</button></div>`);
-    const box=ov.querySelector(".gp-modal");box.querySelector("[data-cancel]").onclick=()=>ov.remove();box.querySelector("[data-save]").onclick=async()=>{const name=box.querySelector('[name="name"]').value.trim();if(!name){message(box,"Vui lòng nhập họ tên",true);return;}const item={id:`added_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,parentKey,name,info:box.querySelector('[name="info"]').value.split("\n").map(x=>x.trim()).filter(Boolean),memorial:box.querySelector('[name="memorial"]').value.trim(),spouses:parseSpouses(box.querySelector('[name="spouses"]').value)};box.classList.add("gp-saving");try{data.added.push(item);await saveData();ov.remove();applyAll();}catch(e){data.added=data.added.filter(x=>x.id!==item.id);box.classList.remove("gp-saving");message(box,e.message,true);}};
+  function openAdd(targetKey,placement="child"){
+    const descriptions={child:"Người mới sẽ được đặt làm con trực tiếp của thành viên đang chọn.",above:"Người mới sẽ được thêm cùng cấp, ngay phía trên nhánh đang chọn.",below:"Người mới sẽ được thêm cùng cấp, ngay phía dưới nhánh đang chọn."};
+    const ov=modal(`<h2>Thêm thành viên</h2><p>${descriptions[placement]}</p><label class="gp-field"><span>Họ và tên</span><input name="name" autofocus></label><label class="gp-field"><span>Thông tin — mỗi dòng một ý</span><textarea name="info"></textarea></label><label class="gp-field"><span>Ngày giỗ</span><input name="memorial"></label><label class="gp-field"><span>Vợ/chồng — Tên | thông tin | ngày giỗ</span><textarea name="spouses"></textarea></label><div class="gp-row"><button class="gp-btn secondary" data-cancel>Hủy</button><button class="gp-btn" data-save>Thêm vào cây</button></div>`);
+    const box=ov.querySelector(".gp-modal");box.querySelector("[data-cancel]").onclick=()=>ov.remove();box.querySelector("[data-save]").onclick=async()=>{const name=box.querySelector('[name="name"]').value.trim();if(!name){message(box,"Vui lòng nhập họ tên",true);return;}const item={id:`added_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,name,info:box.querySelector('[name="info"]').value.split("\n").map(x=>x.trim()).filter(Boolean),memorial:box.querySelector('[name="memorial"]').value.trim(),spouses:parseSpouses(box.querySelector('[name="spouses"]').value)};if(placement==="child")item.parentKey=targetKey;else{item.anchorKey=targetKey;item.placement=placement;}box.classList.add("gp-saving");try{data.added.push(item);await saveData();ov.remove();applyAll();}catch(e){data.added=data.added.filter(x=>x.id!==item.id);box.classList.remove("gp-saving");message(box,e.message,true);}};
   }
 
   async function signInWithPassword(box){
