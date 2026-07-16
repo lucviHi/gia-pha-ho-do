@@ -90,7 +90,7 @@
   function applyEdit(main, edit) {
     if (!edit) return;
     const strong = direct(main, "strong")[0]; if (strong && edit.name) strong.textContent = edit.name;
-    direct(main, "small.gp-managed-info, em.gp-managed-memorial, .gp-managed-spouse").forEach(x => x.remove());
+    direct(main, "small, em, .spouse").forEach(x => x.remove());
     if (Array.isArray(edit.info)) edit.info.forEach(text => { if (!text) return; const s=document.createElement("small"); s.className="gp-managed-info"; s.textContent=text; main.insertBefore(s, main.querySelector(".spouse,.gp-node-actions")); });
     if (edit.memorial) { const e=document.createElement("em"); e.className="gp-managed-memorial"; e.textContent=`Giỗ ${edit.memorial}`; main.insertBefore(e, main.querySelector(".spouse,.gp-node-actions")); }
     if (Array.isArray(edit.spouses)) edit.spouses.forEach(s => main.insertBefore(makeSpouse(s), main.querySelector(".gp-node-actions")));
