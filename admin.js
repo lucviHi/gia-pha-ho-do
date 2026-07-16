@@ -125,7 +125,6 @@
       const summary=document.createElement("summary"); const toggle=document.createElement("span"); toggle.className="gene-toggle"; toggle.textContent="·";
       const main=document.createElement("div"); main.className="gene-main"; main.dataset.gpKey=item.id;
       const strong=document.createElement("strong"); strong.textContent=item.name||"Thành viên mới"; main.appendChild(strong);
-      const badge=document.createElement("small"); badge.className="gp-added-badge"; badge.textContent="Thông tin bổ sung"; main.appendChild(badge);
       (item.info||[]).forEach(t=>{const s=document.createElement("small");s.textContent=t;main.appendChild(s);});
       if(item.memorial){const e=document.createElement("em");e.textContent=`Giỗ ${item.memorial}`;main.appendChild(e);}
       (item.spouses||[]).forEach(s=>main.appendChild(makeSpouse(s)));
