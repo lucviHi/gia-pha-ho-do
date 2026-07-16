@@ -163,13 +163,22 @@
     const box=ov.querySelector(".gp-modal");box.querySelector("[data-cancel]").onclick=()=>ov.remove();box.querySelector("[data-save]").onclick=async()=>{const name=box.querySelector('[name="name"]').value.trim();if(!name){message(box,"Vui lòng nhập họ tên",true);return;}const item={id:`added_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,parentKey,name,info:box.querySelector('[name="info"]').value.split("\n").map(x=>x.trim()).filter(Boolean),memorial:box.querySelector('[name="memorial"]').value.trim(),spouses:parseSpouses(box.querySelector('[name="spouses"]').value)};box.classList.add("gp-saving");try{data.added.push(item);await saveData();ov.remove();applyAll();}catch(e){data.added=data.added.filter(x=>x.id!==item.id);box.classList.remove("gp-saving");message(box,e.message,true);}};
   }
 
-  async function sendLogin(box){
+  async function signInWithPassword(box){
+    const password=box.querySelector('[name="password"]').value;
+    if(!password){message(box,"Vui lòng nhập mật khẩu quản trị.",true);return;}
     box.classList.add("gp-saving");
-    try{const res=await fetch(`${SUPABASE_URL}/auth/v1/otp`,{method:"POST",headers:authHeaders(),body:JSON.stringify({email:ADMIN_EMAIL,options:{emailRedirectTo:location.origin+location.pathname}})});if(!res.ok)throw new Error(await res.text());box.classList.remove("gp-saving");message(box,"Đã gửi liên kết đăng nhập. Hãy mở email và bấm liên kết, sau đó bạn sẽ quay lại trang này.");}catch(e){box.classList.remove("gp-saving");const limited=/429|over_email_send_rate_limit|rate limit/i.test(e.message);message(box,limited?"Bạn vừa yêu cầu gửi email. Vì lý do bảo mật, hãy chờ khoảng 1 phút rồi nhấn Gửi email đăng nhập lần nữa.":"Không gửi được email đăng nhập. Vui lòng thử lại sau.",true);}
+    try{
+      const res=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`,{method:"POST",headers:authHeaders(),body:JSON.stringify({email:ADMIN_EMAIL,password})});
+      const result=await res.json();
+      if(!res.ok)throw new Error(result.error_description||result.msg||result.message||"Đăng nhập không thành công");
+      localStorage.setItem("gp_access_token",result.access_token);
+      if(result.refresh_token)localStorage.setItem("gp_refresh_token",result.refresh_token);
+      location.reload();
+    }catch(e){box.classList.remove("gp-saving");const invalid=/invalid login|invalid credentials/i.test(e.message);message(box,invalid?"Email hoặc mật khẩu chưa đúng. Hãy kiểm tra tài khoản đã được tạo và xác nhận trong Supabase.":e.message,true);}
   }
   function openLogin(){
     if(session){const ov=modal(`<h2>Quản trị gia phả</h2><p>Đang đăng nhập bằng <span class="gp-login-email">${ADMIN_EMAIL}</span>.</p><div class="gp-row"><button class="gp-btn secondary" data-close>Đóng</button><button class="gp-btn danger" data-logout>Đăng xuất</button></div>`);ov.querySelector("[data-close]").onclick=()=>ov.remove();ov.querySelector("[data-logout]").onclick=()=>{localStorage.removeItem("gp_access_token");localStorage.removeItem("gp_refresh_token");location.reload();};return;}
-    const ov=modal(`<h2>Đăng nhập quản trị</h2><p>Chỉ tài khoản <span class="gp-login-email">${ADMIN_EMAIL}</span> được phép chỉnh sửa cây gia phả.</p><div class="gp-message">Supabase sẽ gửi một liên kết đăng nhập an toàn đến email của bạn.</div><div class="gp-row"><button class="gp-btn secondary" data-close>Đóng</button><button class="gp-btn" data-send>Gửi email đăng nhập</button></div>`);const box=ov.querySelector(".gp-modal");box.querySelector("[data-close]").onclick=()=>ov.remove();box.querySelector("[data-send]").onclick=()=>sendLogin(box);
+    const ov=modal(`<h2>Đăng nhập quản trị</h2><p>Chỉ tài khoản <span class="gp-login-email">${ADMIN_EMAIL}</span> được phép chỉnh sửa cây gia phả.</p><label class="gp-field"><span>Mật khẩu quản trị</span><input name="password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu đã đặt trong Supabase"></label><div class="gp-message">Mật khẩu được gửi thẳng tới Supabase để xác thực, website không lưu mật khẩu.</div><div class="gp-row"><button class="gp-btn secondary" data-close>Đóng</button><button class="gp-btn" data-login>Đăng nhập</button></div>`);const box=ov.querySelector(".gp-modal");box.querySelector("[data-close]").onclick=()=>ov.remove();box.querySelector("[data-login]").onclick=()=>signInWithPassword(box);box.querySelector('[name="password"]').addEventListener("keydown",e=>{if(e.key==="Enter")signInWithPassword(box);});
   }
   function launchButton(){const b=document.createElement("button");b.className="gp-admin-launch"+(session?" is-admin":"");b.textContent=session?"✓ Đang chỉnh sửa":"Quản trị";b.onclick=openLogin;document.body.appendChild(b);}
 
