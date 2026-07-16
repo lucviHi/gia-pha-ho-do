@@ -5,6 +5,7 @@
   const SUPABASE_KEY = "sb_publishable_iQVoLxKT-aWZIQ22nmcPng_BGRzjBAH";
   const ADMIN_EMAIL = "bichphuong2561@gmail.com";
   const ROW_ID = "main";
+  const ROOT_KEY = "Cụ tổ Đỗ Húy Công Húy Hỗ__1";
   const blankData = () => ({ edits: {}, added: [], deleted: [] });
   let data = blankData();
   let session = null;
@@ -129,7 +130,7 @@
       keyNodes();
       document.querySelectorAll(".gene-main:not(.gp-added-node .gene-main)").forEach(main => {
         const key=main.dataset.gpKey; const li=main.closest("li");
-        if(li) li.style.display=(data.deleted||[]).includes(key)?"none":"";
+        if(li) li.style.display=(key!==ROOT_KEY&&(data.deleted||[]).includes(key))?"none":"";
         applyEdit(main,(data.edits||{})[key]); addActions(main,key,false);
       });
       renderAdded();
@@ -153,9 +154,10 @@
     const current=isAdded?(data.added||[]).find(x=>x.id===key):((data.edits||{})[key]||originalValues(main));
     const ov=modal(`<h2>Chỉnh sửa thành viên</h2><p>Thông tin sẽ được cập nhật cho mọi người xem sau khi lưu.</p><label class="gp-field"><span>Họ và tên</span><input name="name"></label><label class="gp-field"><span>Thông tin — mỗi dòng một ý</span><textarea name="info"></textarea></label><label class="gp-field"><span>Ngày giỗ</span><input name="memorial" placeholder="Ví dụ: 09/03 âm lịch"></label><label class="gp-field"><span>Vợ/chồng — mỗi người một dòng: Tên | thông tin | ngày giỗ</span><textarea name="spouses"></textarea></label><div class="gp-row"><button class="gp-btn danger" data-delete>Ẩn/xóa</button><button class="gp-btn secondary" data-cancel>Hủy</button><button class="gp-btn" data-save>Lưu thay đổi</button></div>`);
     const box=ov.querySelector(".gp-modal"); box.querySelector('[name="name"]').value=current.name||""; box.querySelector('[name="info"]').value=(current.info||[]).join("\n"); box.querySelector('[name="memorial"]').value=current.memorial||""; box.querySelector('[name="spouses"]').value=spouseText(current.spouses);
+    if(key===ROOT_KEY)box.querySelector("[data-delete]").style.display="none";
     box.querySelector("[data-cancel]").onclick=()=>ov.remove();
     box.querySelector("[data-save]").onclick=async()=>{const val={name:box.querySelector('[name="name"]').value.trim(),info:box.querySelector('[name="info"]').value.split("\n").map(x=>x.trim()).filter(Boolean),memorial:box.querySelector('[name="memorial"]').value.trim(),spouses:parseSpouses(box.querySelector('[name="spouses"]').value)};box.classList.add("gp-saving");try{if(isAdded){Object.assign(data.added.find(x=>x.id===key),val);}else{data.edits[key]=val;}await saveData();ov.remove();applyAll();}catch(e){box.classList.remove("gp-saving");message(box,e.message,true);}};
-    box.querySelector("[data-delete]").onclick=async()=>{if(!confirm("Bạn chắc chắn muốn ẩn/xóa người này khỏi cây?"))return;box.classList.add("gp-saving");try{if(isAdded)data.added=data.added.filter(x=>x.id!==key);else if(!data.deleted.includes(key))data.deleted.push(key);await saveData();ov.remove();applyAll();}catch(e){box.classList.remove("gp-saving");message(box,e.message,true);}};
+    box.querySelector("[data-delete]").onclick=async()=>{if(key===ROOT_KEY){message(box,"Không thể xóa cụ tổ vì đây là gốc của toàn bộ cây.",true);return;}const displayName=box.querySelector('[name="name"]').value.trim();if(!confirm(`Bạn chắc chắn muốn ẩn “${displayName}” và toàn bộ hậu duệ bên dưới khỏi cây?`))return;box.classList.add("gp-saving");try{if(isAdded)data.added=data.added.filter(x=>x.id!==key);else if(!data.deleted.includes(key))data.deleted.push(key);await saveData();ov.remove();applyAll();}catch(e){box.classList.remove("gp-saving");message(box,e.message,true);}};
   }
 
   function openAdd(parentKey){
@@ -177,7 +179,7 @@
     }catch(e){box.classList.remove("gp-saving");const invalid=/invalid login|invalid credentials/i.test(e.message);message(box,invalid?"Email hoặc mật khẩu chưa đúng. Hãy kiểm tra tài khoản đã được tạo và xác nhận trong Supabase.":e.message,true);}
   }
   function openLogin(){
-    if(session){const ov=modal(`<h2>Quản trị gia phả</h2><p>Đang đăng nhập bằng <span class="gp-login-email">${ADMIN_EMAIL}</span>.</p><div class="gp-row"><button class="gp-btn secondary" data-close>Đóng</button><button class="gp-btn danger" data-logout>Đăng xuất</button></div>`);ov.querySelector("[data-close]").onclick=()=>ov.remove();ov.querySelector("[data-logout]").onclick=()=>{localStorage.removeItem("gp_access_token");localStorage.removeItem("gp_refresh_token");location.reload();};return;}
+    if(session){const hidden=(data.deleted||[]).length;const ov=modal(`<h2>Quản trị gia phả</h2><p>Đang đăng nhập bằng <span class="gp-login-email">${ADMIN_EMAIL}</span>.</p>${hidden?`<div class="gp-message">Đang có ${hidden} mục bị ẩn khỏi cây.</div>`:""}<div class="gp-row">${hidden?'<button class="gp-btn secondary" data-restore>Khôi phục mục đã ẩn</button>':""}<button class="gp-btn secondary" data-close>Đóng</button><button class="gp-btn danger" data-logout>Đăng xuất</button></div>`);ov.querySelector("[data-close]").onclick=()=>ov.remove();ov.querySelector("[data-logout]").onclick=()=>{localStorage.removeItem("gp_access_token");localStorage.removeItem("gp_refresh_token");location.reload();};const restore=ov.querySelector("[data-restore]");if(restore)restore.onclick=async()=>{const box=ov.querySelector(".gp-modal");box.classList.add("gp-saving");try{data.deleted=[];await saveData();ov.remove();applyAll();}catch(e){box.classList.remove("gp-saving");message(box,e.message,true);}};return;}
     const ov=modal(`<h2>Đăng nhập quản trị</h2><p>Chỉ tài khoản <span class="gp-login-email">${ADMIN_EMAIL}</span> được phép chỉnh sửa cây gia phả.</p><label class="gp-field"><span>Mật khẩu quản trị</span><input name="password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu đã đặt trong Supabase"></label><div class="gp-message">Mật khẩu được gửi thẳng tới Supabase để xác thực, website không lưu mật khẩu.</div><div class="gp-row"><button class="gp-btn secondary" data-close>Đóng</button><button class="gp-btn" data-login>Đăng nhập</button></div>`);const box=ov.querySelector(".gp-modal");box.querySelector("[data-close]").onclick=()=>ov.remove();box.querySelector("[data-login]").onclick=()=>signInWithPassword(box);box.querySelector('[name="password"]').addEventListener("keydown",e=>{if(e.key==="Enter")signInWithPassword(box);});
   }
   function launchButton(){const b=document.createElement("button");b.className="gp-admin-launch"+(session?" is-admin":"");b.textContent=session?"✓ Đang chỉnh sửa":"Quản trị";b.onclick=openLogin;document.body.appendChild(b);}
