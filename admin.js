@@ -6,7 +6,7 @@
   const ADMIN_EMAIL = "bichphuong2561@gmail.com";
   const ROW_ID = "main";
   const ROOT_KEY = "Cụ tổ Đỗ Húy Công Húy Hỗ__1";
-  const blankData = () => ({ edits: {}, added: [], deleted: [] });
+  const blankData = () => ({ edits: {}, added: [], deleted: [], history: { title: "Lịch sử dòng họ Đỗ", content: "Nội dung lịch sử dòng họ đang được gia đình bổ sung và hoàn thiện." } });
   let data = blankData();
   let session = null;
   let applying = false;
@@ -20,6 +20,7 @@
     .gp-memorial-alert{grid-column:1/-1;border:1px solid #d5a450;background:#fff3cf;color:#5b3820;padding:14px 17px;margin:0;font:13px/1.55 Arial}.gp-memorial-alert strong{display:block;color:#932f24;font:700 17px 'Times New Roman',serif;margin-bottom:5px}.gp-memorial-alert span{display:block}.gp-upcoming{display:inline-block!important;background:#b13b2e;color:#fff!important;border-radius:999px;padding:4px 9px;margin-top:9px;font:700 10px Arial!important}.memorial-grid article.gp-soon{background:#49352b!important;box-shadow:inset 4px 0 0 #e4b34e}.gp-solar-date{display:block;color:#d9c7b3!important;font-size:10px!important;margin-top:4px}
     .gp-parent-node,.gp-parent-node>details,.gp-parent-node>details>ul,.gp-original-root,.gp-original-root>details{box-sizing:border-box;width:100%!important;max-width:none!important}.gp-parent-node>details>summary,.gp-original-root>details>summary{position:relative!important;text-align:center!important;justify-content:center!important}.gp-parent-node>details>summary>.gene-main,.gp-original-root>details>summary>.gene-main{box-sizing:border-box;width:100%!important;text-align:center!important;padding-left:34px!important;padding-right:34px!important}.gp-parent-node>details>summary>.branch-toggle,.gp-original-root>details>summary>.branch-toggle{position:absolute!important;left:18px!important;top:50%!important;transform:translateY(-50%)!important}.gp-original-root>details>summary .spouse{box-sizing:border-box;width:max-content;max-width:calc(100% - 68px);margin-left:auto!important;margin-right:auto!important;text-align:center!important}.gp-parent-node>details>ul{display:block!important;grid-template-columns:none!important;margin:14px 0 0!important;padding:0!important;border-left:0!important}.gp-parent-node>details>ul>.gp-original-root:before{display:none!important}.gp-original-root>details>summary{max-width:520px;margin:0 auto;background:#922f25!important;border:3px double #e7c99f!important}.gp-original-root>details>summary .gene-main>strong,.gp-original-root>details>summary .gene-main>small,.gp-original-root>details>summary .gene-main>em,.gp-original-root>details>summary .spouse b,.gp-original-root>details>summary .spouse small{color:#fff!important}@media(min-width:950px){.gp-original-root>details>ul{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:12px;width:100%!important;margin:18px 0 0!important;padding:0!important;border-left:0!important}.gp-original-root>details>ul>li{min-width:0!important}.gp-original-root>details>ul>li:before{display:none}.gp-original-root>details>ul>li>details>summary{box-sizing:border-box;width:100%;height:100%;min-height:112px;padding:10px}.gp-original-root>details>ul>li .gene-main>strong{font-size:15px}}
     .detailed-tree .gene-root ul>li:last-child:after{content:"";position:absolute;z-index:1;left:-29px;top:26px;bottom:-1px;width:3px;background:#f3eadc}.detailed-tree .gene-root ul>li:last-child>details{position:relative;z-index:2}
+    .gp-history-section{scroll-margin-top:88px;display:grid;grid-template-columns:minmax(210px,.7fr) minmax(0,1.6fr);gap:64px;padding:82px max(7vw,28px);background:#f7efe1;border-top:1px solid #d7c09c;border-bottom:1px solid #d7c09c;color:#3b2a22}.gp-history-heading .eyebrow{margin:0 0 14px;color:#9a3025;font:700 12px/1.4 Arial;letter-spacing:.18em;text-transform:uppercase}.gp-history-heading h2{margin:0;color:#35251e;font:700 clamp(34px,4vw,58px)/1.05 'Times New Roman',serif}.gp-history-body{border-left:3px solid #bd8740;padding:4px 0 4px 30px}.gp-history-content p{margin:0 0 16px;font:17px/1.8 Georgia,'Times New Roman',serif;color:#5d493d;text-align:justify}.gp-history-content p:last-child{margin-bottom:0}.gp-history-edit{margin-top:22px;border:1px solid #8f2f25;background:#8f2f25;color:#fff;padding:9px 15px;font:600 12px Arial;cursor:pointer}.gp-history-edit:hover{background:#6f251d}@media(max-width:720px){.gp-history-section{grid-template-columns:1fr;gap:28px;padding:52px 24px}.gp-history-body{padding-left:20px}.gp-history-content p{font-size:16px;text-align:left}}
   `;
   document.head.appendChild(style);
 
@@ -152,8 +153,33 @@
         applyEdit(main,(data.edits||{})[key]); addActions(main,key,false);
       });
       renderAdded();
+      renderHistory();
       updateMemorialCalendar();
     } finally { applying=false; }
+  }
+
+  function renderHistory() {
+    const nav=document.querySelector(".topbar nav");
+    if(nav&&!nav.querySelector('a[href="#lichsu"]')){const link=document.createElement("a");link.href="#lichsu";link.textContent="Lịch sử";nav.appendChild(link);}
+    let section=document.getElementById("lichsu");
+    if(!section){
+      section=document.createElement("section");section.id="lichsu";section.className="gp-history-section";
+      section.innerHTML='<div class="gp-history-heading"><p class="eyebrow">Nguồn cội dòng họ</p><h2></h2></div><div class="gp-history-body"><div class="gp-history-content"></div></div>';
+      const note=document.querySelector("section.note"),footer=document.querySelector("footer");
+      if(note)note.before(section);else if(footer)footer.before(section);else document.querySelector("main")?.appendChild(section);
+    }
+    const history={...blankData().history,...(data.history||{})};
+    const h2=section.querySelector("h2");if(h2&&h2.textContent!==history.title)h2.textContent=history.title;
+    const content=section.querySelector(".gp-history-content"),signature=history.content||"";
+    if(content&&content.dataset.text!==signature){content.dataset.text=signature;content.replaceChildren();const parts=signature.split(/\n\s*\n|\n/).map(x=>x.trim()).filter(Boolean);(parts.length?parts:["Nội dung lịch sử dòng họ đang được bổ sung."]).forEach(text=>{const p=document.createElement("p");p.textContent=text;content.appendChild(p);});}
+    let edit=section.querySelector(".gp-history-edit");
+    if(session&&!edit){edit=document.createElement("button");edit.type="button";edit.className="gp-history-edit";edit.textContent="Chỉnh sửa lịch sử";edit.onclick=openHistoryEditor;section.querySelector(".gp-history-body")?.appendChild(edit);}else if(!session&&edit)edit.remove();
+  }
+
+  function openHistoryEditor(){
+    const current={...blankData().history,...(data.history||{})};
+    const ov=modal('<h2>Chỉnh sửa lịch sử dòng họ</h2><p>Nội dung sau khi lưu sẽ được hiển thị công khai trong tab Lịch sử.</p><label class="gp-field"><span>Tiêu đề</span><input name="title"></label><label class="gp-field"><span>Nội dung lịch sử</span><textarea name="content" style="min-height:260px" placeholder="Nhập nội dung lịch sử dòng họ..."></textarea></label><div class="gp-row"><button class="gp-btn secondary" data-cancel>Hủy</button><button class="gp-btn" data-save>Lưu nội dung</button></div>');
+    const box=ov.querySelector(".gp-modal");box.querySelector('[name="title"]').value=current.title;box.querySelector('[name="content"]').value=current.content;box.querySelector("[data-cancel]").onclick=()=>ov.remove();box.querySelector("[data-save]").onclick=async()=>{const title=box.querySelector('[name="title"]').value.trim(),content=box.querySelector('[name="content"]').value.trim();if(!title){message(box,"Vui lòng nhập tiêu đề.",true);return;}box.classList.add("gp-saving");try{data.history={title,content};await saveData();ov.remove();renderHistory();}catch(e){box.classList.remove("gp-saving");message(box,e.message,true);}};
   }
 
   function jdFromDate(dd,mm,yy){let a=Math.floor((14-mm)/12),y=yy+4800-a,m=mm+12*a-3,jd=dd+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;if(jd<2299161)jd=dd+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-32083;return jd;}
